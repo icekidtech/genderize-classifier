@@ -40,8 +40,13 @@ export async function classifyGender(name: string): Promise<ProcessedData> {
 
     return processedData;
   } catch (apiError) {
-    const error = apiError as AxiosError;
-    console.error('Genderize API error:', error.message);
-    throw new Error('External API error: Unable to process gender classification');
+    // Only throw generic error for actual API failures (network, timeout, etc)
+    if (apiError instanceof Error && !apiError.message.includes('No prediction')) {
+      const error = apiError as AxiosError;
+      console.error('Genderize API error:', error.message);
+      throw new Error('External API error: Unable to process gender classification');
+    }
+    // Re-throw "No prediction" errors as-is
+    throw apiError;
   }
 }

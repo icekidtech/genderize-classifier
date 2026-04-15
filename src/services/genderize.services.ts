@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { GenderizeResponse, ProcessedData, ErrorResponse } from '../types/index.types';
+import { GenderizeResponse, ProcessedData } from '../types/index.types';
 import { calculateConfidence, getCurrentTimestamp } from '../utils/helpers.utils';
 
 /**

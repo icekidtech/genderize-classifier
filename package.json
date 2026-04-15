@@ -4,8 +4,10 @@
     "description": "REST API endpoint for gender classification using Genderize API",
     "main": "dist/main.js",
     "scripts": {
-        "start": "pnpm run build && node dist/main.js",
-        "dev": "ts-node src/main.ts"
+        "build": "tsc && echo Build completed successfully.",
+        "start": "node dist/main.js",
+        "dev": "ts-node src/main.ts",
+        "test": "ts-node tests/classify.test.ts"
     },
     "keywords": [],
     "author": "",

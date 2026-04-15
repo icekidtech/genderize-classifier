@@ -17,7 +17,7 @@ export interface ProcessedData {
 }
 
 export interface SuccessResponse {
-    success: boolean;
+    status: 'success';
     data: ProcessedData;
 }
 

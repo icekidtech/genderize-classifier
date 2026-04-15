@@ -48,7 +48,7 @@ export const classifyRoute = async (req: Request, res: Response): Promise<void> 
 
     // ===== Success Response =====
     const response: SuccessResponse = {
-      status: 'boolean',
+      status: 'success',
       data: processedData,
     };
 

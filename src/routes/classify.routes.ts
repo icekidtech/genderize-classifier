@@ -43,6 +43,15 @@ export const classifyRoute = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    // Check if name is only numeric
+    if (/^\d+$/.test(trimmedName)) {
+      res.status(422).json({
+        status: 'error',
+        message: 'Name must be a string',
+      } as ErrorResponse);
+      return;
+    }
+
     // ===== Call Service =====
     const processedData = await classifyGender(trimmedName);
 

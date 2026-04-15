@@ -1,4 +1,4 @@
-// Enable CORS using middelware
+import { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 
 export const corsMiddleware = cors({
@@ -7,8 +7,8 @@ export const corsMiddleware = cors({
     credentials: true,
 });
 
-// Fallback: Manually set CORS headers if cors middleware fails
-export const manualCors = (req: any, res: any, next: any) => {
+// Fallback middleware to manually set CORS headers if corsMiddleware fails
+export const manualCors = (_req: Request, res: Response, next: NextFunction) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type');

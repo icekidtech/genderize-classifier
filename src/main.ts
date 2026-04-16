@@ -4,7 +4,7 @@ import { classifyRoute } from './routes/classify.routes';
 import { healthRoute } from './routes/health.routes';
 
 const app: Express = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5000;
 
 // ==================== Middleware ====================
 

@@ -1,6 +1,4 @@
-import type { Ecosystem } from 'pm2';
-
-const config: Ecosystem = {
+module.exports = {
   apps: [
     {
       name: 'genderize-classifier',
@@ -30,5 +28,3 @@ const config: Ecosystem = {
     },
   ],
 };
-
-export default config;

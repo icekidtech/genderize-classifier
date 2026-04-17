@@ -1,244 +1,409 @@
-# Genderize Classifier
+# HNG Profile Intelligence Service
 
-A REST API server that classifies and predicts gender based on names using the [Genderize.io API](https://genderize.io/). Built with Node.js, Express, and TypeScript for production-ready performance and type safety.
+A production-ready REST API for profile enrichment and management. This multi-stage project progressively builds features, from simple gender classification (Stage 0) to comprehensive profile intelligence with data persistence (Stage 1+).
+
+**Current Version:** `1.0.0` (Stage 1 - Data Persistence & API Design - COMPLETED)
+
+## Table of Contents
+
+- [Features](#features)
+- [Stage 0: Gender Classification](#stage-0-gender-classification)
+- [Stage 1: Profile Intelligence (New)](#stage-1-profile-intelligence)
+- [Prerequisites & Installation](#prerequisites--installation)
+- [Configuration](#configuration)
+- [Running the Server](#running-the-server)
+- [API Endpoints](#api-endpoints)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Project Structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
 
 ## Features
 
-- **Fast & Reliable** - REST API endpoint for gender classification
-- **Type-Safe** - Full TypeScript support for robust development
-- **CORS Enabled** - Cross-origin resource sharing configured
-- **Confidence Metrics** - Provides probability and sample size for predictions
-- **Health Checks** - Built-in health monitoring endpoint
-- **Error Handling** - Comprehensive input validation and error responses
-- **Production Ready** - PM2 configuration for VPS deployment
+**Stage 0:**
+- Gender classification API using Genderize.io
+- Type-safe TypeScript implementation
+- CORS enabled for cross-origin requests
+- Health check monitoring
+- Comprehensive error handling
 
-## Prerequisites
+**Stage 1 (Completed - v1.0.0):**
+- PostgreSQL database integration with TypeORM
+- Multi-API enrichment (Genderize, Agify, Nationalize)
+- Profile creation, retrieval, filtering, and deletion
+- Idempotency for duplicate submissions
+- UUID v4 generation for profile IDs
+- Advanced filtering (gender, country, age group)
+- Robust data validation and error handling
+- 204 No Content responses for deletions
+- **15/15 integration tests passing**
+- Full data persistence with automatic schema synchronization
 
-- **Node.js** v16+ 
-- **pnpm** v8+ (or npm/yarn)
-- **TypeScript** knowledge (optional, pre-configured)
+## Stage 0: Gender Classification
 
-## Installation
+**Endpoint:** `GET /api/classify?name={name}`
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/icekidtech/genderize-classifier.git
-cd genderize-classifier
-```
-
-### 2. Install Dependencies
-
-Using pnpm (recommended):
-```bash
-pnpm install
-```
-
-Or using npm:
-```bash
-npm install
-```
-
-### 3. Build the Project
+### Example Request
 
 ```bash
-pnpm build
+curl "http://localhost:5000/api/classify?name=John"
 ```
 
-This compiles TypeScript files from `src/` to JavaScript in `dist/`.
+### Example Response (200)
 
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file in the project root (optional):
-
-```env
-PORT=3000
-NODE_ENV=development
-```
-
-**Supported Variables:**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3000` | Server port |
-| `NODE_ENV` | `development` | Environment mode (development/production) |
-
-## Usage
-
-### Local Development
-
-Start the development server with hot-reloading using ts-node:
-
-```bash
-pnpm dev
-```
-
-Server runs on `http://localhost:3000` by default.
-
-### Production
-
-Start the production server (requires build step):
-
-```bash
-pnpm build
-pnpm start
-```
-
-Or specify a custom port:
-
-```bash
-PORT=5000 pnpm start
-```
-
-## API Endpoints
-
-### 1. Health Check
-
-**Endpoint:** `GET /health`
-
-**Description:** Check if the server is running and ready to handle requests.
-
-**Response:**
-```json
-{
-  "message": "Server is running"
-}
-```
-
-**Example:**
-```bash
-curl http://localhost:3000/health
-```
-
----
-
-### 2. Gender Classification
-
-**Endpoint:** `GET /api/classify`
-
-**Query Parameters:**
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `name` | string | Yes | The name to classify |
-
-**Success Response (200):**
 ```json
 {
   "status": "success",
   "data": {
     "name": "John",
     "gender": "male",
-    "probability": 0.95,
-    "sample_size": 1250,
+    "probability": 0.99,
+    "sample_size": 5000,
     "is_confident": true,
-    "processed_at": "2024-04-16T10:30:45Z"
+    "processed_at": "2026-04-17T12:00:00.000Z"
   }
 }
 ```
 
-**Error Response (400/422):**
+### Error Responses
+
+```bash
+# Missing name (400)
+curl "http://localhost:5000/api/classify"
+
+# Invalid type (422)
+curl "http://localhost:5000/api/classify?name=123"
+
+# External API failure (502)
+# Response: {"status": "error", "message": "External API error: Unable to process gender classification"}
+```
+
+---
+
+### Stage 1: Profile Intelligence (Completed)
+
+### Overview
+
+Stage 1 adds data persistence and multi-API integration. The system enriches names using three external APIs, all profiles are persisted in PostgreSQL with automatic schema management:
+
+- **Genderize.io** - Gender prediction
+- **Agify.io** - Age prediction  
+- **Nationalize.io** - Nationality/country prediction
+
+All data is persisted in PostgreSQL with UUID v7 identifiers.
+
+### New Endpoints
+
+#### 1. Create Profile - `POST /api/profiles`
+
+**Request:**
 ```json
 {
-  "status": "error",
-  "message": "Missing or empty name parameter"
+  "name": "ella"
 }
 ```
 
-**Examples:**
-
-Classify a male name:
-```bash
-curl "http://localhost:3000/api/classify?name=John"
-```
-
-Classify a female name:
-```bash
-curl "http://localhost:3000/api/classify?name=Sarah"
-```
-
-With spaces in name:
-```bash
-curl "http://localhost:3000/api/classify?name=Mary%20Jane"
-```
-
----
-
-### Response Format
-
-All responses follow a consistent structure:
-
-**Success:**
-```javascript
+**Success Response (201):**
+```json
 {
-  status: "success",
-  data: {
-    name: string,              // Input name
-    gender: "male" | "female", // Predicted gender
-    probability: number,       // Confidence score (0-1)
-    sample_size: number,       // Number of records analyzed
-    is_confident: boolean,     // True if probability > 0.75 and sample_size > 100
-    processed_at: string       // ISO timestamp
+  "status": "success",
+  "data": {
+    "id": "b3f9c1e2-7d4a-4c91-9c2a-1f0a8e5b6d12",
+    "name": "ella",
+    "gender": "female",
+    "gender_probability": 0.99,
+    "sample_size": 1234,
+    "age": 46,
+    "age_group": "adult",
+    "country_id": "DRC",
+    "country_probability": 0.85,
+    "created_at": "2026-04-01T12:00:00.000Z"
   }
 }
 ```
 
-**Error:**
-```javascript
+**Idempotency (Duplicate Name - 200):**
+```json
 {
-  status: "error",
-  message: string // Error description
+  "status": "success",
+  "message": "Profile already exists",
+  "data": { ...existing profile... }
 }
 ```
 
----
+#### 2. Get Profile - `GET /api/profiles/{id}`
 
-## Error Codes
-
-| Status | Code | Message | Reason |
-|--------|------|---------|--------|
-| 400 | `Bad Request` | Missing or empty name parameter | Name query param missing or blank |
-| 422 | `Unprocessable Entity` | Name must be a string | Invalid data type or numeric-only input |
-| 500 | `Internal Server Error` | External API error | Genderize.io API unreachable or timeout |
-
----
-
-## Project Structure
-
+**Request:**
+```bash
+curl "http://localhost:5000/api/profiles/b3f9c1e2-7d4a-4c91-9c2a-1f0a8e5b6d12"
 ```
-genderize-classifier/
-├── src/
-│   ├── main.ts                 # Entry point
-│   ├── middleware/
-│   │   └── index.middleware.ts # CORS and request middleware
-│   ├── routes/
-│   │   ├── classify.routes.ts  # Gender classification endpoint
-│   │   └── health.routes.ts    # Health check endpoint
-│   ├── services/
-│   │   └── genderize.services.ts # Genderize API integration
-│   ├── types/
-│   │   └── index.types.ts      # TypeScript interfaces
-│   └── utils/
-│       └── helpers.utils.ts    # Helper functions
-├── dist/                       # Compiled JavaScript output
-├── tests/
-│   └── classify.test.ts        # Test file
-├── config.ecosystem.ts         # PM2 ecosystem configuration
-├── package.json                # Dependencies and scripts
-├── tsconfig.json               # TypeScript configuration
-└── README.md                   # This file
+
+**Response (200):**
+```json
+{
+  "status": "success",
+  "data": {
+    "id": "b3f9c1e2-7d4a-4c91-9c2a-1f0a8e5b6d12",
+    "name": "emmanuel",
+    "gender": "male",
+    "gender_probability": 0.99,
+    "sample_size": 1234,
+    "age": 25,
+    "age_group": "adult",
+    "country_id": "NG",
+    "country_probability": 0.85,
+    "created_at": "2026-04-01T12:00:00.000Z"
+  }
+}
+```
+
+#### 3. List Profiles - `GET /api/profiles`
+
+**With Filters:**
+```bash
+curl "http://localhost:5000/api/profiles?gender=male&country_id=NG&age_group=adult"
+```
+
+**Response (200):**
+```json
+{
+  "status": "success",
+  "count": 2,
+  "data": [
+    {
+      "id": "id-1",
+      "name": "emmanuel",
+      "gender": "male",
+      "age": 25,
+      "age_group": "adult",
+      "country_id": "NG"
+    },
+    {
+      "id": "id-2",
+      "name": "tunde",
+      "gender": "male",
+      "age": 32,
+      "age_group": "adult",
+      "country_id": "NG"
+    }
+  ]
+}
+```
+
+#### 4. Delete Profile - `DELETE /api/profiles/{id}`
+
+**Request:**
+```bash
+curl -X DELETE "http://localhost:5000/api/profiles/b3f9c1e2-7d4a-4c91-9c2a-1f0a8e5b6d12"
+```
+
+**Response (204 No Content)**
+
+---
+
+## Prerequisites & Installation
+
+### Requirements
+
+- **Node.js** v16+
+- **pnpm** v8+ (or npm/yarn)
+- **PostgreSQL** 12+ (for Stage 1)
+- **Git**
+
+### Initial Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repo-url>
+   cd stage-zero
+   ```
+
+2. **Checkout the stage you want to work with:**
+   ```bash
+   # For Stage 0 (released)
+   git checkout main
+
+   # For Stage 1 development (in progress)
+   git checkout stage-1
+
+   # Or for latest development
+   git checkout develop
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pnpm install
+   ```
+
+4. **Build the project:**
+   ```bash
+   pnpm build
+   ```
+
+---
+
+## Configuration
+
+### Environment Variables
+
+Create a `.env` file in the project root. Copy from `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+**For Stage 0 (Basic):**
+```env
+NODE_ENV=development
+PORT=5000
+```
+
+**For Stage 1 (With Database):**
+```env
+# Application
+NODE_ENV=development
+PORT=5000
+
+# PostgreSQL (Option 1: Connection string - recommended)
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/genderize_stage1
+
+# PostgreSQL (Option 2: Individual parameters)
+# DATABASE_HOST=localhost
+# DATABASE_PORT=5432
+# DATABASE_USER=postgres
+# DATABASE_PASSWORD=postgres
+# DATABASE_NAME=genderize_stage1
+
+# External APIs (optional - uses defaults if not set)
+GENDERIZE_API_URL=https://api.genderize.io
+AGIFY_API_URL=https://api.agify.io
+NATIONALIZE_API_URL=https://api.nationalize.io
+
+# API Configuration
+API_TIMEOUT=5000
+LOG_LEVEL=info
+```
+
+### Database Setup (Stage 1)
+
+1. **Create the database locally:**
+   ```bash
+   createdb genderize_stage1
+   ```
+
+2. **Or define custom connection in .env:**
+   ```env
+   DATABASE_URL=postgresql://user:password@host:5432/custom_db_name
+   ```
+
+3. **Migrations will run automatically on server start.**
+
+---
+
+## Running the Server
+
+### Development Mode (Hot Reload)
+
+```bash
+pnpm dev
+```
+
+Server runs on `http://localhost:5000` by default.
+
+### Production Build & Start
+
+```bash
+pnpm build
+pnpm start
+```
+
+### Custom Port
+
+```bash
+PORT=3000 pnpm dev
+# or
+PORT=3000 pnpm start
+```
+
+---
+
+## API Endpoints
+
+### Health Check
+
+```bash
+GET /health
+
+Response: {"status": "ok"}
+```
+
+### Stage 0: Classification
+
+```bash
+GET /api/classify?name=John
+
+Response (200):
+{
+  "status": "success",
+  "data": {
+    "name": "John",
+    "gender": "male",
+    "probability": 0.99,
+    "sample_size": 5000,
+    "is_confident": true,
+    "processed_at": "2026-04-17T12:00:00.000Z"
+  }
+}
+```
+
+### Stage 1: Profile Management
+
+```bash
+# Create
+POST /api/profiles
+Body: {"name": "ella"}
+Response: 201 or 200 (idempotent)
+
+# Get by ID
+GET /api/profiles/{id}
+Response: 200 or 404
+
+# List with filters
+GET /api/profiles?gender=male&country_id=NG&age_group=adult
+Response: 200
+
+# Delete
+DELETE /api/profiles/{id}
+Response: 204 No Content or 404
 ```
 
 ---
 
 ## Testing
 
-Run the test suite:
+### Test Stage 0 (Classification)
 
 ```bash
 pnpm test
+```
+
+### Test Stage 1 (Profiles) ✅
+
+```bash
+pnpm test:profiles
+```
+
+**Status:** All 15 integration tests passing ✅
+- Profile creation with multi-API enrichment
+- Idempotency verification
+- Filtering (gender, country, age group)
+- Error handling (validation, not found, API failures)
+- Delete operations
+
+### Test Both
+
+```bash
+pnpm test && pnpm test:profiles
 ```
 
 ---
@@ -247,156 +412,185 @@ pnpm test
 
 ### VPS Deployment with PM2
 
-This project includes a `config.ecosystem.ts` file for PM2 process management. Follow these steps to deploy on your VPS:
+See [RELEASE_PROCESS.md](RELEASE_PROCESS.md) for versioning and release procedures.
 
-#### Prerequisites on VPS
-
-- Node.js v16+
-- pnpm installed globally
-- PM2 installed globally: `npm install -g pm2`
-
-#### Deployment Steps
-
-1. **Copy project to VPS:**
-   ```bash
-   scp -r . user@vps-ip:/path/to/genderize-classifier
-   ```
-
-2. **SSH into VPS:**
-   ```bash
-   ssh user@vps-ip
-   cd /path/to/genderize-classifier
-   ```
-
-3. **Install dependencies (production only):**
-   ```bash
-   pnpm install --prod
-   ```
-
-4. **Build the project:**
-   ```bash
-   pnpm build
-   ```
-
-5. **Start with PM2:**
-   ```bash
-   pm2 start config.ecosystem.ts
-   ```
-
-6. **Verify it's running:**
-   ```bash
-   pm2 list
-   pm2 logs genderize-classifier
-   ```
-
-7. **Setup auto-startup on reboot:**
-   ```bash
-   pm2 startup
-   pm2 save
-   ```
-
-#### PM2 Configuration Details
-
-The `config.ecosystem.ts` file includes:
-
-- **Port:** 5000 (avoids conflict with port 3000)
-- **Memory Limit:** 300MB auto-restart
-- **Auto-restart:** Enabled on crashes
-- **Logging:** Error and output logs in `logs/` directory
-- **Min Uptime:** 10s (counts as successful start after 10s)
-- **Max Restarts:** 10 attempts before giving up
-
-#### Useful PM2 Commands
+**Quick PM2 Setup:**
 
 ```bash
-# List all PM2 processes
-pm2 list
+# Install PM2 globally (once)
+npm install -g pm2
+
+# Start the app
+pm2 start ecosystem.config.js
 
 # View logs
 pm2 logs genderize-classifier
 
-# Stop the app
-pm2 stop genderize-classifier
-
-# Restart the app
-pm2 restart genderize-classifier
-
-# Delete from PM2
-pm2 delete genderize-classifier
-
-# Monitor in real-time
-pm2 monit
+# Setup auto-restart
+pm2 startup
+pm2 save
 ```
 
 ---
 
-## Testing the Deployment
+## Project Structure
 
-After deployment, test the endpoint:
-
-```bash
-# Health check
-curl http://<vps-ip>:5000/health
-
-# Classify a name
-curl "http://<vps-ip>:5000/api/classify?name=John"
 ```
+stage-zero/
+├── src/
+│   ├── main.ts                      # Entry point
+│   ├── database.ts                  # TypeORM configuration (Stage 1)
+│   ├── middleware/
+│   │   └── index.middleware.ts      # CORS middleware
+│   ├── routes/
+│   │   ├── health.routes.ts         # Health check
+│   │   ├── classify.routes.ts       # Gender classification (Stage 0)
+│   │   └── profiles.routes.ts       # Profile management (Stage 1)
+│   ├── services/
+│   │   ├── genderize.services.ts    # Genderize API
+│   │   ├── agify.services.ts        # Agify API (Stage 1)
+│   │   ├── nationalize.services.ts  # Nationalize API (Stage 1)
+│   │   └── profiles.services.ts     # Profile orchestration (Stage 1)
+│   ├── entities/
+│   │   └── Profile.ts               # TypeORM Profile entity (Stage 1)
+│   ├── repositories/
+│   │   └── ProfileRepository.ts     # Database access layer (Stage 1)
+│   ├── migrations/
+│   │   └── *-CreateProfilesTable.ts # Database migrations (Stage 1)
+│   ├── types/
+│   │   └── index.types.ts           # TypeScript interfaces
+│   └── utils/
+│       └── helpers.utils.ts         # Helper functions
+├── tests/
+│   ├── classify.test.ts             # Stage 0 tests
+│   └── profiles.test.ts             # Stage 1 tests
+├── dist/                            # Compiled output
+├── CHANGELOG.md                     # Version history
+├── CONTRIBUTION.md                  # Development guide
+├── RELEASE_PROCESS.md               # Release procedures
+├── .env.example                     # Environment template
+├── package.json                     # Dependencies & scripts
+├── tsconfig.json                    # TypeScript config
+├── ecosystem.config.js              # PM2 config
+└── README.md                        # This file
+```
+
+---
+
+## Error Codes
+
+| Status | Reason | Response |
+|--------|--------|----------|
+| 200 | Success (or idempotent) | `{"status": "success", "data": {...}}` |
+| 201 | Created | `{"status": "success", "data": {...}}` |
+| 204 | Deleted (No Content) | (empty) |
+| 400 | Bad Request (missing/empty name) | `{"status": "error", "message": "..."}` |
+| 404 | Not Found | `{"status": "error", "message": "Profile not found"}` |
+| 422 | Invalid Type | `{"status": "error", "message": "Name must be a string"}` |
+| 500 | Server Error | `{"status": "error", "message": "Internal server error"}` |
+| 502 | External API Error | `{"status": "error", "message": "{API} returned an invalid response"}` |
 
 ---
 
 ## Troubleshooting
 
+### PostgreSQL Connection Error (Stage 1)
+
+```
+Error: connect ECONNREFUSED 127.0.0.1:5432
+```
+
+**Solution:**
+- Ensure PostgreSQL is running: `psql --version` and try `psql`
+- Check DATABASE_URL format in .env
+- Verify database exists: `psql -l`
+
 ### Port Already in Use
 
-If port 3000 (or 5000) is already occupied:
-
 ```bash
-# Find process using port
-lsof -i :3000
-
-# Kill the process
+# Find and kill process on port 5000
+lsof -i :5000
 kill -9 <PID>
 
 # Or use different port
-PORT=3001 pnpm start
+PORT=3001 pnpm dev
 ```
 
-### Genderize API Timeout
+### External API Timeout
 
-If requests fail with timeout errors:
-- Check internet connectivity on VPS
-- Verify Genderize.io is accessible: `curl https://api.genderize.io`
-- Timeout is set to 5 seconds in `src/services/genderize.services.ts`
+If profiles fail to create with 502 errors:
+- Check internet connection
+- Verify external APIs are reachable:
+  ```bash
+  curl https://api.genderize.io?name=test
+  curl https://api.agify.io?name=test
+  curl https://api.nationalize.io?name=test
+  ```
 
-### PM2 Won't Start
+### TypeORM Migration Issues
 
-Ensure the build step completed:
 ```bash
-pnpm build
-ls -la dist/  # Verify dist/main.js exists
+# Run migrations manually
+npm run typeorm migration:run
+
+# View migration status
+npm run typeorm migration:show
 ```
 
 ---
 
-## Performance Notes
+## Development Guide
 
-- API calls to Genderize.io have a 5-second timeout
-- Responses include probability scores for confidence-based filtering
-- Recommended for classifying single names per request
-- For batch processing, consider throttling requests to avoid rate limits
+See [CONTRIBUTION.md](CONTRIBUTION.md) for:
+- Branch strategy
+- Local setup instructions
+- Code style guidelines
+- Testing requirements
+- PR checklist
+
+---
+
+## Release Notes
+
+See [CHANGELOG.md](CHANGELOG.md) for version history and [RELEASE_PROCESS.md](RELEASE_PROCESS.md) for release procedures.
+
+**Current Release:** `1.0.0` (Stage 1 - Completed ✅)  
+**Upcoming:** Stage 2 (TBD)
 
 ---
 
 ## Dependencies
 
+### Production
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `express` | ^5.1.0 | Web framework |
-| `axios` | ^1.12.2 | HTTP client for API calls |
-| `cors` | ^2.8.5 | Cross-origin resource sharing |
-| `dotenv` | ^17.2.3 | Environment variable management |
-| `typescript` | ^5.9.3 | Type safety (dev) |
-| `ts-node` | ^10.9.2 | TypeScript execution (dev) |
+| express | ^5.1.0 | Web framework |
+| axios | ^1.12.2 | HTTP client |
+| cors | ^2.8.5 | CORS middleware |
+| pg | ^8.11.3 | PostgreSQL driver |
+| typeorm | ^0.3.17 | ORM & migrations |
+| uuid | ^9.0.1 | UUID generation |
+| dotenv | ^17.2.3 | Environment config |
+
+### Development
+| Package | Version | Purpose |
+|---------|---------|---------|
+| typescript | ^5.9.3 | Type safety |
+| ts-node | ^10.9.2 | TS execution |
+| @types/* | Latest | Type definitions |
+| reflect-metadata | ^0.1.13 | TypeORM decorators |
+
+---
+
+## License
+
+ISC
+
+---
+
+## Support
+
+For issues, questions, or contributions, refer to [CONTRIBUTION.md](CONTRIBUTION.md).
 
 ---
 

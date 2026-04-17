@@ -1,0 +1,138 @@
+import { randomUUID } from 'crypto';
+import axios from 'axios';
+
+// Simple UUID generator (using v4 since v7 requires proper timestamp encoding)
+function generateUUID(): string {
+  return randomUUID();
+}
+
+export interface ProcessedProfile {
+  id: string;
+  name: string;
+  gender: string | null;
+  gender_probability: number | null;
+  sample_size: number | null;
+  age: number | null;
+  age_group: string | null;
+  country_id: string | null;
+  country_probability: number | null;
+  created_at: string;
+}
+
+export class ProfilesService {
+  private genderizeURL = process.env.GENDERIZE_API_URL || 'https://api.genderize.io';
+  private agifyURL = process.env.AGIFY_API_URL || 'https://api.agify.io';
+  private nationalizeURL = process.env.NATIONALIZE_API_URL || 'https://api.nationalize.io';
+  private timeout = parseInt(process.env.API_TIMEOUT || '5000', 10);
+
+  /**
+   * Classify age into age groups
+   */
+  private classifyAgeGroup(age: number | null): string | null {
+    if (age === null) return null;
+    if (age >= 0 && age <= 12) return 'child';
+    if (age >= 13 && age <= 19) return 'teenager';
+    if (age >= 20 && age <= 59) return 'adult';
+    if (age >= 60) return 'senior';
+    return null;
+  }
+
+  /**
+   * Call Genderize API
+   */
+  private async callGenderizeAPI(name: string): Promise<any> {
+    try {
+      const response = await axios.get(this.genderizeURL, {
+        params: { name: name.trim() },
+        timeout: this.timeout,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Genderize returned an invalid response`);
+    }
+  }
+
+  /**
+   * Call Agify API
+   */
+  private async callAgifyAPI(name: string): Promise<any> {
+    try {
+      const response = await axios.get(this.agifyURL, {
+        params: { name: name.trim() },
+        timeout: this.timeout,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Agify returned an invalid response`);
+    }
+  }
+
+  /**
+   * Call Nationalize API
+   */
+  private async callNationalizeAPI(name: string): Promise<any> {
+    try {
+      const response = await axios.get(this.nationalizeURL, {
+        params: { name: name.trim() },
+        timeout: this.timeout,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(`Nationalize returned an invalid response`);
+    }
+  }
+
+  /**
+   * Enrich a name with data from all three external APIs
+   */
+  async enrichProfile(name: string): Promise<ProcessedProfile> {
+    try {
+      // Call all three APIs in parallel
+      const [genderizeResp, agifyResp, nationalizeResp] = await Promise.all([
+        this.callGenderizeAPI(name),
+        this.callAgifyAPI(name),
+        this.callNationalizeAPI(name),
+      ]);
+
+      // Validate Genderize response
+      if (!genderizeResp.gender || genderizeResp.count === 0) {
+        throw new Error('Genderize returned an invalid response');
+      }
+
+      // Validate Agify response
+      if (agifyResp.age === null) {
+        throw new Error('Agify returned an invalid response');
+      }
+
+      // Validate Nationalize response
+      if (!nationalizeResp.country || nationalizeResp.country.length === 0) {
+        throw new Error('Nationalize returned an invalid response');
+      }
+
+      // Extract country with highest probability
+      const topCountry = nationalizeResp.country.reduce((prev: any, current: any) =>
+        current.probability > prev.probability ? current : prev
+      );
+
+      // Process and structure the data
+      const profile: ProcessedProfile = {
+        id: generateUUID(),
+        name: name.trim(),
+        gender: genderizeResp.gender,
+        gender_probability: genderizeResp.probability,
+        sample_size: genderizeResp.count,
+        age: agifyResp.age,
+        age_group: this.classifyAgeGroup(agifyResp.age),
+        country_id: topCountry.country_id,
+        country_probability: topCountry.probability,
+        created_at: new Date().toISOString(),
+      };
+
+      return profile;
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+export const profilesService = new ProfilesService();

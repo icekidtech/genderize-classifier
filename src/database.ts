@@ -15,12 +15,12 @@ export const AppDataSource = new DataSource({
   username: process.env.DATABASE_USER || '',
   password: process.env.DATABASE_PASSWORD || '',
   database: process.env.DATABASE_NAME || '',
-  synchronize: process.env.NODE_ENV === '' ? false : true, // Auto-sync in dev, migrations in prod
+  synchronize: true, // Auto-create schema from entities (migrations will be skipped)
   logging: process.env.NODE_ENV !== 'production',
   entities: [Profile],
   migrations: process.env.NODE_ENV === 'production' ? ['dist/migrations/*.js'] : ['src/migrations/*.ts'],
   subscribers: [],
-  migrationsRun: process.env.NODE_ENV === 'production', // Only run migrations in production
+  migrationsRun: false, // Disabled - using synchronize instead
 });
 
 export async function initializeDatabase() {
